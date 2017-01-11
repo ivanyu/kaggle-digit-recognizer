@@ -91,5 +91,9 @@ ENV/
 # IntelliJ
 .idea/
 
+# R
+.RData
+.Rhistory
+
 # Data
 data/
