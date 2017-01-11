@@ -11,7 +11,7 @@ from meta import data_filename
 def display(images, row_n, col_n):
     for i in range(len(images)):
         plt.subplot(row_n, col_n, i + 1)
-        pixels = images[i, :].reshape((28, 28))
+        pixels = meta.vector_to_imt(images[i, :])
         plt.imshow(pixels, cmap='gray')
     plt.show()
 
