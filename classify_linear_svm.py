@@ -4,7 +4,7 @@
 from __future__ import print_function
 import time
 import click
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import LinearSVC
 from sklearn.model_selection import cross_val_score
 from meta import data_filename
 from classify_base import load_data
@@ -16,21 +16,40 @@ def cli():
     pass
 
 
-option_k = click.option('-k', help='Number of nearest neighbors.',
-                        type=int, required=True)
+def create_classifier(c, dual):
+    # dual - better False if n_samples > n_features
+
+    return LinearSVC(C=c,
+                     penalty="l2",
+                     loss="squared_hinge",
+                     dual=dual,
+                     multi_class='ovr',
+                     verbose=0)
+
+
+option_c = click.option('-c',
+                        help='Penalty parameter C of the error term.',
+                        type=float, required=True)
+option_dual = click.option('-dual',
+                           help='Select the algorithm to either solve '
+                                'the dual or primal optimization problem. '
+                                'Prefer dual=False when '
+                                'n_samples > n_features.',
+                           type=bool, default=False, required=False)
 
 
 @cli.command()
 @click.option('-f', '--folds', help='Number of folds.',
               type=int, required=True)
-@option_k
-def cv(folds, k):
+@option_c
+@option_dual
+def cv(folds, c, dual):
     """Run cross-validation"""
 
     (X_train, y_train, X_test) = load_data()
 
-    print("kNN classifier, k =", k)
-    classifier = KNeighborsClassifier(n_neighbors=k, n_jobs=-1)
+    print("SVM classifier, C = {}, dual = {}".format(c, dual))
+    classifier = create_classifier(c, dual)
 
     print("Cross-validation")
     scores = cross_val_score(classifier, X_train, y_train,
@@ -39,14 +58,15 @@ def cv(folds, k):
 
 
 @cli.command()
-@option_k
-def classify(k):
+@option_c
+@option_dual
+def classify(c, dual):
     """Classify digits in the test set"""
 
     (X_train, y_train, X_test) = load_data()
 
-    print("kNN classifier, k =", k)
-    classifier = KNeighborsClassifier(n_neighbors=k, n_jobs=-1)
+    print("SVM classifier, C = {}, dual = {}".format(c, dual))
+    classifier = create_classifier(c, dual)
 
     print("Test classification")
     print("Training classifier...")
@@ -63,7 +83,10 @@ def classify(k):
 
     print("Writing output file...")
     enumerate_and_write_predictions(
-        predictions, data_filename('final_knn_{}.csv'.format(k)))
+        predictions, data_filename(
+            'final_linearsvm_C={}_dual={}.csv'.format(c, dual)
+        )
+    )
 
 
 if __name__ == '__main__':
