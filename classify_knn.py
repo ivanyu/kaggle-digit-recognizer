@@ -9,6 +9,7 @@ from sklearn.model_selection import cross_val_score
 from meta import data_filename
 from classify_base import load_data
 from classify_base import enumerate_and_write_predictions
+from classify_base import create_pca_applicator
 
 
 @click.group()
@@ -18,19 +19,28 @@ def cli():
 
 option_k = click.option('-k', help='Number of nearest neighbors.',
                         type=int, required=True)
-
+option_pca = click.option('--pca', help='Apply PCA with possible whitening',
+                          type=str, required=False, default=None)
 
 @cli.command()
 @click.option('-f', '--folds', help='Number of folds.',
               type=int, required=True)
 @option_k
-def cv(folds, k):
+@option_pca
+def cv(folds, k, pca):
     """Run cross-validation"""
 
-    (X_train, y_train, X_test) = load_data()
+    (X_train, y_train, _) = load_data('minmax01')
+
+    if pca is not None:
+        pca_applicator = create_pca_applicator(pca)
+        print('Applying PCA {}'.format(pca_applicator))
+        pca_applicator.fit(X_train)
+        X_train = pca_applicator.transform(X_train)
 
     print("kNN classifier, k =", k)
     classifier = KNeighborsClassifier(n_neighbors=k, n_jobs=-1)
+    print(classifier)
 
     print("Cross-validation")
     scores = cross_val_score(classifier, X_train, y_train,
@@ -40,13 +50,22 @@ def cv(folds, k):
 
 @cli.command()
 @option_k
-def classify(k):
+@option_pca
+def classify(k, pca):
     """Classify digits in the test set"""
 
-    (X_train, y_train, X_test) = load_data()
+    (X_train, y_train, X_test) = load_data('minmax01')
+
+    if pca is not None:
+        pca_applicator = create_pca_applicator(pca)
+        print('Applying PCA {}'.format(pca_applicator))
+        pca_applicator.fit(X_train)
+        X_train = pca_applicator.transform(X_train)
+        X_test = pca_applicator.transform(X_test)
 
     print("kNN classifier, k =", k)
     classifier = KNeighborsClassifier(n_neighbors=k, n_jobs=-1)
+    print(classifier)
 
     print("Test classification")
     print("Training classifier...")
@@ -63,8 +82,9 @@ def classify(k):
 
     print("Writing output file...")
     enumerate_and_write_predictions(
-        predictions, data_filename('final_knn_{}.csv'.format(k)))
+        predictions, data_filename('final_knn_{}_PCA={}.csv'.format(k, pca)))
 
 
 if __name__ == '__main__':
-    cli()
+    from sys import argv
+    cli(argv[1:])
