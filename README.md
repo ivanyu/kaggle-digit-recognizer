@@ -3,6 +3,26 @@
 ## Results
 
 ```
+Multilayer perceptron #2
+classify_mlp_2.py
+
+1 hidden layer, 800 neurons, batchnorm, relu, dropout 0.4
+2 hidden layer, 800 neurons, batchnorm, relu, dropout 0.4
+1 output layer, 10 neurons, softmax
+Xavier normal initialization
+Weight regularization: L2(0.00001)
+Optimizer: Adam with defaults
+Batch size: 64
+Learning rate schedule: steps by epochs (see file)
+
+282 epochs
+Last epoch: 3s - loss: 0.0284 - acc: 0.9989
+               - val_loss: 0.0832 - val_acc: 0.9876
+Train time: ~15 minutes
+Test: 0.98657
+```
+
+```
 Multilayer perceptron #1
 classify_mlp_1.py
 

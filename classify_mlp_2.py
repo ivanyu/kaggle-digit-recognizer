@@ -16,25 +16,33 @@ from classify_base import load_data
 from classify_base import enumerate_and_write_predictions
 
 
-# Multilayer perceptron 1
-# 186 epochs
-# Last epoch: 2s - loss: 0.0245 - acc: 0.9989
-#                - val_loss: 0.0758 - val_acc: 0.9860
-# Train time: ~7 minutes
-# Test: 0.98443
+# Multilayer perceptron 2
+# 282 epochs
+# Last epoch: 3s - loss: 0.0284 - acc: 0.9989
+#                - val_loss: 0.0832 - val_acc: 0.9876
+# Train time: ~15 minutes
+# Test: 0.98657
 
 
-regularization = 0.00005
+regularization = 0.00001
 w_regularizer = l2(regularization)
 
 model = Sequential()
-model.add(Dense(1000,
+model.add(Dense(800,
                 input_shape=(meta.IMG_WIDTH * meta.IMG_HEIGHT,),
                 init='glorot_normal',
                 activation=None, W_regularizer=w_regularizer))
 model.add(BatchNormalization())
 model.add(Activation('relu'))
 model.add(Dropout(0.4))
+
+model.add(Dense(800,
+                init='glorot_normal',
+                activation=None, W_regularizer=w_regularizer))
+model.add(BatchNormalization())
+model.add(Activation('relu'))
+model.add(Dropout(0.4))
+
 model.add(Dense(10,
                 init='glorot_normal',
                 activation='softmax', W_regularizer=w_regularizer))
@@ -77,7 +85,7 @@ class LearningPlotCallback(Callback):
 
 class ValAccuracyEarlyStopping(Callback):
     def on_epoch_end(self, epoch, logs={}):
-        if logs['val_acc'] >= 0.9850:
+        if logs['val_acc'] >= 0.9875:
             self.stopped_epoch = epoch
             self.model.stop_training = True
         pass
@@ -90,25 +98,25 @@ class StepsLearningRateScheduler(LearningRateScheduler):
 
     @staticmethod
     def _schedule(epoch):
-        if epoch < 80:
+        if epoch < 120:
             return 0.0010
-        elif epoch < 110:
-            return 0.0009
-        elif epoch < 120:
-            return 0.0008
-        elif epoch < 130:
-            return 0.0007
-        elif epoch < 140:
-            return 0.0006
         elif epoch < 150:
-            return 0.0005
-        elif epoch < 160:
-            return 0.0004
+            return 0.0009
         elif epoch < 170:
-            return 0.0003
-        elif epoch < 180:
-            return 0.0002
+            return 0.0008
         elif epoch < 190:
+            return 0.0007
+        elif epoch < 210:
+            return 0.0006
+        elif epoch < 230:
+            return 0.0005
+        elif epoch < 250:
+            return 0.0004
+        elif epoch < 270:
+            return 0.0003
+        elif epoch < 290:
+            return 0.0002
+        elif epoch < 310:
             return 0.0001
         return 0.00005
 
@@ -125,7 +133,8 @@ history = model.fit(X_train, y_train,
                     nb_epoch=n_epochs, batch_size=batch_size,
                     callbacks=[learning_plot_callback,
                                val_acc_early_stopping,
-                               learning_rate_scheduler],
+                               learning_rate_scheduler
+                               ],
                     verbose=2, shuffle=True)
 
 print('Train time, s:', int(time.time() - train_start))
