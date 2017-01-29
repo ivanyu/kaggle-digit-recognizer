@@ -12,18 +12,31 @@ TRAIN_LABELS_BIN_FILENAME = 'train_labels.npy'
 TRAIN_PIXELS_BIN_FILENAME = 'train_pixels.npy'
 TEST_PIXELS_BIN_FILENAME = 'test_pixels.npy'
 
+TRAIN_LABELS_ZOOMED_BIN_FILENAME = 'train_labels_zoomed.npy'
+TRAIN_PIXELS_ZOOMED_BIN_FILENAME = 'train_pixels_zoomed.npy'
+
+TRAIN_PIXELS_MINMAX01_BIN_FILENAME = 'train_pixels_minmax01.npy'
+TEST_PIXELS_MINMAX01_BIN_FILENAME = 'test_pixels_minmax01.npy'
+
+KERAS_DATA_DIR = path.join(DATA_DIR, 'keras')
+
 
 def data_filename(fn):
     return path.join(DATA_DIR, fn)
 
 
+def keras_data_filename(fn):
+    return path.join(KERAS_DATA_DIR, fn)
+
+
 # Images
 IMG_WIDTH = 28
 IMG_HEIGHT = 28
+IMG_VEC_LENGTH = IMG_WIDTH * IMG_HEIGHT
 
 
 def img_to_vector(img):
-    return img.reshape((IMG_HEIGHT * IMG_WIDTH))
+    return img.reshape((IMG_VEC_LENGTH,))
 
 
 def vector_to_imt(img):
