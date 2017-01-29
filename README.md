@@ -23,6 +23,25 @@ Test: 0.98657
 ```
 
 ```
+Multilayer perceptron #1 Mk II - less gerularized, iterator and functional API
+classify_mlp_1.py
+
+1 hidden layer, 1000 neurons, batchnorm, relu, dropout 0.4
+1 output layer, 10 neurons, softmax
+Xavier normal initialization
+Weight regularization: L2(0.00001)
+Optimizer: Adam with defaults
+Batch size: 64
+Learning rate schedule: steps by epochs (see file)
+
+183 epochs
+Last epoch: 4s - loss: 0.0173 - acc: 0.9994
+               - val_loss: 0.0789 - val_acc: 0.9852
+Train time: ~12.2 minutes
+Test: 0.98557
+```
+
+```
 Multilayer perceptron #1
 classify_mlp_1.py
 

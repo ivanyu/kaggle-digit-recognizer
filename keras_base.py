@@ -31,7 +31,7 @@ class _SubsetIterator(Iterator):
         index_array, current_index, current_batch_size =\
             next(self.index_generator)
 
-        batch_x = np.zeros((current_batch_size, meta.IMG_HEIGHT * meta.IMG_WIDTH))
+        batch_x = np.zeros((current_batch_size, meta.IMG_VEC_LENGTH))
         for i, j in enumerate(index_array):
             fname = self._filenames[j]
             x = self._load_image(fname)
@@ -46,8 +46,12 @@ class _SubsetIterator(Iterator):
 
     def _load_image(self, fname):
         if fname not in self._cache:
-            with open(os.path.join(self._directory, fname), 'rb') as fh:
-                x = np.frombuffer(fh.read(), dtype='int32').reshape((meta.IMG_WIDTH * meta.IMG_HEIGHT,))
+            # with open(os.path.join(self._directory, fname), 'rb') as fh:
+            #     x = np.frombuffer(fh.read(), dtype='int32')
+            # x = x.reshape((meta.IMG_VEC_LENGTH,))
+
+            x = np.load(os.path.join(self._directory, fname))
+
             x = np.expand_dims(x, axis=0)
             self._cache[fname] = x
         return self._cache[fname]
@@ -155,7 +159,8 @@ class MnistIterators(object):
         return (np.vstack(xs), np.vstack(ys))
 
     def _load_image(self, fname):
-        with open(os.path.join(self._directory, fname), 'rb') as fh:
-            x = np.frombuffer(fh.read(), dtype='int32').reshape(
-                (meta.IMG_WIDTH * meta.IMG_HEIGHT,))
+        # with open(os.path.join(self._directory, fname), 'rb') as fh:
+        #     x = np.frombuffer(fh.read(), dtype='int32')
+        # x = x.reshape((meta.IMG_VEC_LENGTH,))
+        x = np.load(os.path.join(self._directory, fname))
         return np.expand_dims(x, axis=0)

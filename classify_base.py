@@ -4,7 +4,9 @@
 from __future__ import print_function
 import re
 import numpy as np
-from sklearn import preprocessing
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MaxAbsScaler
 from sklearn.decomposition import PCA
 import meta
 from meta import data_filename
@@ -22,13 +24,15 @@ def load_data(scaling=None):
 
     if scaling is not None:
         if scaling == 'standard':
-            scaler = preprocessing.StandardScaler().fit(X_train)
+            scaler = StandardScaler(copy=True).fit(X_train)
         elif scaling == 'minmax01':
-            scaler = preprocessing.MinMaxScaler(feature_range=(0, 1)).fit(X_train)
+            scaler = MinMaxScaler(feature_range=(0, 1),
+                                  copy=True).fit(X_train)
         elif scaling == 'minmax-11':
-            scaler = preprocessing.MinMaxScaler(feature_range=(-1, 1)).fit(X_train)
+            scaler = MinMaxScaler(feature_range=(-1, 1),
+                                  copy=True).fit(X_train)
         elif scaling == 'maxabs':
-            scaler = preprocessing.MaxAbsScaler().fit(X_train)
+            scaler = MaxAbsScaler().fit(X_train)
         X_train = scaler.fit_transform(X_train)
         X_test = scaler.transform(X_test)
 
