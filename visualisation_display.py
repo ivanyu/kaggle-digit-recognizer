@@ -8,11 +8,14 @@ import meta
 from meta import data_filename
 
 
-def display(images, row_n, col_n):
+def display(images, row_n, col_n, vmin=0.0, vmax=1.0, labels=None):
     for i in range(len(images)):
         plt.subplot(row_n, col_n, i + 1)
+        plt.axis('off')
         pixels = meta.vector_to_imt(images[i, :])
-        plt.imshow(pixels, cmap='gray')
+        plt.imshow(pixels, cmap='gray', vmin=vmin, vmax=vmax)
+        if labels:
+            plt.text(0, -2, str(labels[i]))
     plt.show()
 
 
