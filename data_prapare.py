@@ -70,14 +70,12 @@ def zoom(img, zoom_tuple, **kwargs):
 
 # Vertical 0.9 - 1.1
 # Horizontal 0.9 - 1.1
-# vertical_zoom_range = [0.9, 1.0, 1.1]
-vertical_zoom_range = [1.0]
-horizontal_zoom_range = [1.0]
+vertical_zoom_range = [0.9, 1.0, 1.1]
+horizontal_zoom_range = [0.9, 1.0, 1.1]
 
 multiplier = len(vertical_zoom_range) * len(horizontal_zoom_range)
 
-# directory = "zoomed0"
-directory = "original"
+directory = "zoomed0"
 
 if not path.exists(meta.keras_data_filename(directory)):
     os.mkdir(meta.keras_data_filename(directory))
@@ -139,7 +137,6 @@ for _i, idx in enumerate(train_indices):
             np.save(fname, img_zoomed)
 
             fname_img = meta.keras_data_filename(
-                '{0}/{1:07d}-{2}.jpg'.format(path.join(directory, 'train_img'),
-                                             idx,
-                                             y[idx]))
+                '{0}/{1:05d}-{2:04d}-{3}.jpg'.format(path.join(directory, 'train_img'),
+                                                     idx, transformation_counter, y[idx]))
             scipy.misc.imsave(fname_img, img.reshape(meta.IMG_WIDTH, meta.IMG_HEIGHT))

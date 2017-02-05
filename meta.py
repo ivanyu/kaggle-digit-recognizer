@@ -12,12 +12,6 @@ TRAIN_LABELS_BIN_FILENAME = 'train_labels.npy'
 TRAIN_PIXELS_BIN_FILENAME = 'train_pixels.npy'
 TEST_PIXELS_BIN_FILENAME = 'test_pixels.npy'
 
-TRAIN_LABELS_ZOOMED_BIN_FILENAME = 'train_labels_zoomed.npy'
-TRAIN_PIXELS_ZOOMED_BIN_FILENAME = 'train_pixels_zoomed.npy'
-
-TRAIN_PIXELS_MINMAX01_BIN_FILENAME = 'train_pixels_minmax01.npy'
-TEST_PIXELS_MINMAX01_BIN_FILENAME = 'test_pixels_minmax01.npy'
-
 KERAS_DATA_DIR = path.join(DATA_DIR, 'keras')
 
 

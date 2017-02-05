@@ -5,12 +5,81 @@ from __future__ import print_function
 import os
 from os import path
 import re
-import random
+import matplotlib.pyplot as plt
 import json
 import numpy as np
+from keras.utils import np_utils
 from keras.preprocessing.image import Iterator
+from keras.callbacks import Callback
 from sklearn.preprocessing import MinMaxScaler
 import meta
+from classify_base import load_data
+
+
+def load_data_prepared_for_keras(nb_classes, valid_split):
+    (X, y, X_test) = load_data('minmax01')
+
+    y = np_utils.to_categorical(y, nb_classes)
+
+    shuffled_indices = np.random.permutation(len(X))
+    split_point = int(len(shuffled_indices) * valid_split)
+    train_indices = shuffled_indices[:-split_point]
+    valid_indices = shuffled_indices[-split_point:]
+
+    X = X\
+        .reshape((X.shape[0], meta.IMG_WIDTH, meta.IMG_HEIGHT, 1))\
+        .astype(float)
+
+    X_train = X[train_indices, :]
+    y_train = y[train_indices]
+    X_valid = X[valid_indices, :]
+    y_valid = y[valid_indices]
+
+    X_test = X_test\
+        .reshape((X_test.shape[0], meta.IMG_WIDTH, meta.IMG_HEIGHT, 1)) \
+        .astype(float)
+
+    return X_train, y_train, X_valid, y_valid, X_test
+
+
+def make_predictions(model, X_test):
+    proba = model.predict_on_batch(X_test)
+    if proba.shape[-1] > 1:
+        predictions = proba.argmax(axis=-1)
+    else:
+        predictions = (proba > 0.5).astype('int32')
+
+    return predictions.reshape((predictions.shape[0], 1))
+
+
+class FakeLock(object):
+    def __enter__(self):
+        pass
+
+    def __exit__(self, type, value, traceback):
+        pass
+
+
+class LearningPlotCallback(Callback):
+    def __init__(self, n_epochs):
+        super(LearningPlotCallback, self).__init__()
+        self._n_epochs = n_epochs
+
+    def on_train_begin(self, logs={}):
+        plt.ion()
+        plt.axis([0, self._n_epochs, 0, 0.5])
+        plt.grid()
+        self._loss = []
+        self._val_loss = []
+
+    def on_epoch_end(self, epoch, logs={}):
+        self._loss.append(logs['loss'])
+        self._val_loss.append(logs['val_loss'])
+
+        plt.plot(self._loss, 'r-')
+        plt.plot(self._val_loss, 'b-')
+        plt.pause(0.0001)
+        pass
 
 
 class _SubsetIterator(Iterator):
