@@ -3,6 +3,7 @@
 
 from __future__ import print_function
 import os
+from os import path
 import re
 import random
 import json
@@ -31,16 +32,16 @@ class _SubsetIterator(Iterator):
         index_array, current_index, current_batch_size =\
             next(self.index_generator)
 
+        batch_y = np.zeros((current_batch_size, self._nb_class), dtype='float32')
+        for i, label in enumerate(self._classes[index_array]):
+            batch_y[i, label] = 1.
+
         batch_x = np.zeros((current_batch_size, meta.IMG_VEC_LENGTH))
         for i, j in enumerate(index_array):
             fname = self._filenames[j]
-            x = self._load_image(fname)
+            x = self._load_image(path.join('train', fname))
             x = self._scaler.transform(x)
             batch_x[i] = x
-
-        batch_y = np.zeros((len(batch_x), self._nb_class), dtype='float32')
-        for i, label in enumerate(self._classes[index_array]):
-            batch_y[i, label] = 1.
 
         return batch_x, batch_y
 
@@ -50,33 +51,27 @@ class _SubsetIterator(Iterator):
             #     x = np.frombuffer(fh.read(), dtype='int32')
             # x = x.reshape((meta.IMG_VEC_LENGTH,))
 
-            x = np.load(os.path.join(self._directory, fname))
-
+            x = np.load(path.join(self._directory, fname))
             x = np.expand_dims(x, axis=0)
+
             self._cache[fname] = x
         return self._cache[fname]
 
 
 class MnistIterators(object):
 
-    def __init__(self, directory, batch_size, validation_split):
+    def __init__(self, directory, batch_size):
         self._directory = directory
         self._batch_size = batch_size
 
         scaler_filename = '_scaler.json'
 
-        all_files = os.listdir(directory)
-        if scaler_filename in all_files:
-            all_files.remove(scaler_filename)
+        self._train_files = os.listdir(path.join(directory, 'train'))
+        self._valid_files = os.listdir(path.join(directory, 'valid'))
 
-        random.shuffle(all_files)
-        split = int(len(all_files) * validation_split)
-        self._train_files = all_files[0:-split]
-        self._valid_files = all_files[-split:]
+        self.scaler = MinMaxScaler(feature_range=(0, 1), copy=True)
 
-        self.scaler = MinMaxScaler(feature_range=(0, 1), copy=False)
-
-        r = re.compile(r'^\d+-(?P<c>\d)')
+        r = re.compile(r'^.*(?P<c>\d)\.npy$')
 
         class_set = set()
 
@@ -93,7 +88,7 @@ class MnistIterators(object):
             self._train_classes.append(cls)
 
             if not scaler_exists:
-                x = self._load_image(fname)
+                x = self._load_image(path.join('train', fname))
                 self.scaler.partial_fit(x)
 
         for fname in self._valid_files:
@@ -104,7 +99,7 @@ class MnistIterators(object):
             self._valid_classes.append(cls)
 
             if not scaler_exists:
-                x = self._load_image(fname)
+                x = self._load_image(path.join('valid', fname))
                 self.scaler.partial_fit(x)
 
         self._nb_class = len(class_set)
@@ -149,7 +144,7 @@ class MnistIterators(object):
         xs = []
         ys = []
         for fname, label in zip(self._valid_files, self._valid_classes):
-            x = self._load_image(fname)
+            x = self._load_image(path.join('valid', fname))
             x = self.scaler.transform(x)
             xs.append(x)
             y = np.zeros(self._nb_class, dtype='float32')
@@ -162,5 +157,22 @@ class MnistIterators(object):
         # with open(os.path.join(self._directory, fname), 'rb') as fh:
         #     x = np.frombuffer(fh.read(), dtype='int32')
         # x = x.reshape((meta.IMG_VEC_LENGTH,))
-        x = np.load(os.path.join(self._directory, fname))
+        x = np.load(path.join(self._directory, fname))
         return np.expand_dims(x, axis=0)
+
+if __name__ == '__main__':
+    mis = MnistIterators(meta.keras_data_filename('G:/zoomed0/'),
+                         batch_size=64)
+    train_iter = mis.create_train_iterator()
+
+    from visualisation_display import display
+    for _ in range(4):
+        X, y = next(train_iter)
+        labels = []
+        for y in y[0:20]:
+            labels.append(str(np.where(y > 0)[0]))
+        display(np.vstack([
+            X[0:20, :],
+        ]), 4, 5, vmin=0.0, vmax=1.0, labels=labels)
+    pass
+

@@ -25,6 +25,14 @@ from keras_base import MnistIterators
 # Train time: ~12.2 minutes
 # Test: 0.98557
 
+# Multilayer perceptron 1 Mk III - split into train/valid in advance,
+# no logic changed
+# 185 epochs
+# Last epoch: 3s - loss: 0.0168 - acc: 0.9996
+#                - val_loss: 0.0786 - val_acc: 0.9850
+# Train time: ~10 minutes
+# Test: 0.98443
+
 
 if __name__ == '__main__':
     from keras.models import Model
@@ -63,8 +71,7 @@ if __name__ == '__main__':
     batch_size = 64
 
     mis = MnistIterators(meta.keras_data_filename('original/'),
-                         batch_size=batch_size,
-                         validation_split=0.1)
+                         batch_size=batch_size)
 
     X_test = np.load(data_filename(meta.TEST_PIXELS_BIN_FILENAME))
     X_test = mis.scaler.transform(X_test)
