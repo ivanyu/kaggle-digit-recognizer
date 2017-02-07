@@ -3,6 +3,12 @@
 ## Results
 
 ```
+Voting of 7 Multilayer perceptron 1 Mk V
+Test: 0.98757
+Not agree on: 21 test samples
+```
+
+```
 Multilayer perceptron #2
 classify_mlp_2.py
 
