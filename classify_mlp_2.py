@@ -4,15 +4,17 @@
 from __future__ import print_function
 import time
 from keras.models import Sequential
+from keras.models import Model
+from keras.layers import Input, Flatten
 from keras.layers import Dense, Activation, Dropout, BatchNormalization
 from keras.optimizers import Adam
 from keras.callbacks import Callback, LearningRateScheduler
 from keras.regularizers import l2
-from keras.utils import np_utils
-import matplotlib.pyplot as plt
+from keras.preprocessing.image import ImageDataGenerator
 import meta
 from meta import data_filename
-from classify_base import load_data
+from keras_base import LearningPlotCallback, FakeLock
+from keras_base import load_data_prepared_for_keras, save_model
 from classify_base import enumerate_and_write_predictions
 
 
@@ -27,25 +29,30 @@ from classify_base import enumerate_and_write_predictions
 regularization = 0.00001
 w_regularizer = l2(regularization)
 
-model = Sequential()
-model.add(Dense(800,
-                input_shape=(meta.IMG_WIDTH * meta.IMG_HEIGHT,),
-                init='glorot_normal',
-                activation=None, W_regularizer=w_regularizer))
-model.add(BatchNormalization())
-model.add(Activation('relu'))
-model.add(Dropout(0.4))
+inputs = Input(shape=(meta.IMG_WIDTH, meta.IMG_HEIGHT, 1))
 
-model.add(Dense(800,
-                init='glorot_normal',
-                activation=None, W_regularizer=w_regularizer))
-model.add(BatchNormalization())
-model.add(Activation('relu'))
-model.add(Dropout(0.4))
+layer = Flatten()(inputs)
 
-model.add(Dense(10,
+layer = Dense(800,
+              input_shape=(meta.IMG_WIDTH * meta.IMG_HEIGHT,),
+              init='glorot_normal',
+              activation=None, W_regularizer=w_regularizer)(layer)
+layer = BatchNormalization()(layer)
+layer = Activation('relu')(layer)
+layer = Dropout(0.4)(layer)
+
+layer = Dense(800,
+              init='glorot_normal',
+              activation=None, W_regularizer=w_regularizer)(layer)
+layer = BatchNormalization()(layer)
+layer = Activation('relu')(layer)
+layer = Dropout(0.4)(layer)
+
+outputs = Dense(10,
                 init='glorot_normal',
-                activation='softmax', W_regularizer=w_regularizer))
+                activation='softmax', W_regularizer=w_regularizer)(layer)
+
+model = Model(input=inputs, output=outputs)
 
 optimizer = Adam()
 model.compile(loss='categorical_crossentropy',
@@ -54,33 +61,15 @@ model.compile(loss='categorical_crossentropy',
 
 model.summary()
 
-n_epochs = 500
+nb_epoch = 500
 batch_size = 64
 
 nb_classes = 10
-(X_train, y_train, X_test) = load_data('minmax01')
-y_train = np_utils.to_categorical(y_train, nb_classes)
 
+X_train, y_train, X_valid, y_valid, X_test =\
+    load_data_prepared_for_keras(nb_classes, valid_split=0.1)
 
-class LearningPlotCallback(Callback):
-    def __init__(self, n_epochs):
-        super(LearningPlotCallback, self).__init__()
-        self._n_epochs = n_epochs
-
-    def on_train_begin(self, logs={}):
-        plt.ion()
-        plt.axis([0, self._n_epochs, 0, 0.5])
-        plt.grid()
-        self._loss = []
-        self._val_loss = []
-
-    def on_epoch_end(self, epoch, logs={}):
-        self._loss.append(logs['loss'])
-        self._val_loss.append(logs['val_loss'])
-
-        plt.plot(self._loss, 'r-')
-        plt.plot(self._val_loss, 'b-')
-        plt.pause(0.0001)
+samples_per_epoch = X_train.shape[0]
 
 
 class ValAccuracyEarlyStopping(Callback):
@@ -126,16 +115,23 @@ val_acc_early_stopping = ValAccuracyEarlyStopping()
 
 learning_rate_scheduler = StepsLearningRateScheduler()
 
+idg = ImageDataGenerator(dim_ordering='tf')
+train_iter = idg.flow(X_train, y_train, batch_size=batch_size, shuffle=True)
+train_iter.lock = FakeLock()
+
 train_start = time.time()
 
-history = model.fit(X_train, y_train,
-                    validation_split=0.1,
-                    nb_epoch=n_epochs, batch_size=batch_size,
-                    callbacks=[learning_plot_callback,
-                               val_acc_early_stopping,
-                               learning_rate_scheduler
-                               ],
-                    verbose=2, shuffle=True)
+history = model.fit_generator(
+    train_iter,
+    samples_per_epoch=samples_per_epoch,
+    nb_epoch=nb_epoch,
+    verbose=2,
+    callbacks=[learning_plot_callback,
+               val_acc_early_stopping,
+               learning_rate_scheduler],
+
+    validation_data=(X_valid, y_valid)
+)
 
 print('Train time, s:', int(time.time() - train_start))
 
