@@ -51,6 +51,30 @@ def make_predictions(model, X_test):
     return predictions.reshape((predictions.shape[0], 1))
 
 
+def save_model(model, name, number):
+    print('Saving model to disk')
+
+    if not path.exists(meta.MODELS_DIR):
+        os.mkdir(meta.MODELS_DIR)
+
+    fname_model = path.join(meta.MODELS_DIR,
+                            'model_{}_{}.json'.format(name, number))
+    fname_model_weights =\
+        path.join(meta.MODELS_DIR,
+                  'model_{}_{}_weights.h5'.format(name, number))
+
+    assert not path.exists(fname_model)
+    assert not path.exists(fname_model_weights)
+
+    model_json = model.to_json()
+    with open(fname_model, 'w') as f:
+        f.write(model_json)
+
+    model.save_weights(fname_model_weights)
+
+    print("Saved model to disk: {}, {}".format(fname_model, fname_model_weights))
+
+
 class FakeLock(object):
     def __enter__(self):
         pass

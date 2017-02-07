@@ -6,6 +6,7 @@ from os import path
 
 # File names
 DATA_DIR = 'data'
+MODELS_DIR = 'models'
 TRAIN_CSV_FILENAME = 'train.csv'
 TEST_CSV_FILENAME = 'test.csv'
 TRAIN_LABELS_BIN_FILENAME = 'train_labels.npy'

@@ -15,6 +15,7 @@ from keras.regularizers import l2
 from keras.preprocessing.image import ImageDataGenerator
 from keras_base import FakeLock, LearningPlotCallback
 from keras_base import load_data_prepared_for_keras, make_predictions
+from keras_base import save_model
 
 
 # Multilayer perceptron 1
@@ -46,6 +47,8 @@ from keras_base import load_data_prepared_for_keras, make_predictions
 # Train time: ~18,2 minutes
 # Test: 0.98557
 
+# Multilayer perceptron 1 Mk V - shorter learning (-30 steps with initial rate)
+# ~~ equals to Mk IV
 
 regularization = 0.00001
 w_regularizer = l2(regularization)
@@ -88,7 +91,7 @@ samples_per_epoch = X_train.shape[0]
 
 class ValAccuracyEarlyStopping(Callback):
     def on_epoch_end(self, epoch, logs={}):
-        if epoch > 180 and logs['val_acc'] >= 0.9850:
+        if (epoch > 150 and logs['val_acc'] >= 0.9850) or epoch > 180:
             self.stopped_epoch = epoch
             self.model.stop_training = True
         pass
@@ -101,25 +104,25 @@ class StepsLearningRateScheduler(LearningRateScheduler):
 
     @staticmethod
     def _schedule(epoch):
-        if epoch < 80:
+        if epoch < 50:
             return 0.0010
-        elif epoch < 110:
+        elif epoch < 80:
             return 0.0009
-        elif epoch < 120:
+        elif epoch < 90:
             return 0.0008
-        elif epoch < 130:
+        elif epoch < 100:
             return 0.0007
-        elif epoch < 140:
+        elif epoch < 110:
             return 0.0006
-        elif epoch < 150:
+        elif epoch < 120:
             return 0.0005
-        elif epoch < 160:
+        elif epoch < 130:
             return 0.0004
-        elif epoch < 170:
+        elif epoch < 140:
             return 0.0003
-        elif epoch < 180:
+        elif epoch < 150:
             return 0.0002
-        elif epoch < 190:
+        elif epoch < 160:
             return 0.0001
         return 0.00005
 
@@ -154,3 +157,5 @@ print(predictions)
 output_file_name = data_filename('play_nn.csv')
 print("Writing output file {}...".format(output_file_name))
 enumerate_and_write_predictions(predictions, output_file_name)
+
+save_model(model, 'mlp1', 6)
