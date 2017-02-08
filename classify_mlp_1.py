@@ -77,8 +77,6 @@ model.compile(loss='categorical_crossentropy',
 
 model.summary()
 
-model_json = model.to_json()
-
 nb_epoch = 500
 batch_size = 64
 nb_classes = 10
@@ -91,7 +89,7 @@ samples_per_epoch = X_train.shape[0]
 
 class ValAccuracyEarlyStopping(Callback):
     def on_epoch_end(self, epoch, logs={}):
-        if (epoch > 150 and logs['val_acc'] >= 0.9850) or epoch > 180:
+        if (epoch >= 150 and logs['val_acc'] >= 0.9850) or epoch >= 180:
             self.stopped_epoch = epoch
             self.model.stop_training = True
         pass
@@ -132,11 +130,11 @@ val_acc_early_stopping = ValAccuracyEarlyStopping()
 
 learning_rate_scheduler = StepsLearningRateScheduler()
 
-train_start = time.time()
-
 idg = ImageDataGenerator(dim_ordering='tf')
 train_iter = idg.flow(X_train, y_train, batch_size=batch_size, shuffle=True)
 train_iter.lock = FakeLock()
+
+train_start = time.time()
 
 history = model.fit_generator(
     train_iter,

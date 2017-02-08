@@ -3,7 +3,6 @@
 
 from __future__ import print_function
 import time
-from keras.models import Sequential
 from keras.models import Model
 from keras.layers import Input, Flatten
 from keras.layers import Dense, Activation, Dropout, BatchNormalization
@@ -14,7 +13,8 @@ from keras.preprocessing.image import ImageDataGenerator
 import meta
 from meta import data_filename
 from keras_base import LearningPlotCallback, FakeLock
-from keras_base import load_data_prepared_for_keras, save_model
+from keras_base import load_data_prepared_for_keras, make_predictions
+from keras_base import save_model
 from classify_base import enumerate_and_write_predictions
 
 
@@ -24,6 +24,8 @@ from classify_base import enumerate_and_write_predictions
 #                - val_loss: 0.0832 - val_acc: 0.9876
 # Train time: ~15 minutes
 # Test: 0.98657
+
+# Multilayer perceptron 2 Mk II - default Keras ImageDataGenerator
 
 
 regularization = 0.00001
@@ -74,7 +76,7 @@ samples_per_epoch = X_train.shape[0]
 
 class ValAccuracyEarlyStopping(Callback):
     def on_epoch_end(self, epoch, logs={}):
-        if logs['val_acc'] >= 0.9875:
+        if logs['val_acc'] >= 0.9875 or epoch >= 300:
             self.stopped_epoch = epoch
             self.model.stop_training = True
         pass
@@ -110,7 +112,7 @@ class StepsLearningRateScheduler(LearningRateScheduler):
         return 0.00005
 
 
-learning_plot_callback = LearningPlotCallback(n_epochs)
+learning_plot_callback = LearningPlotCallback(nb_epoch)
 val_acc_early_stopping = ValAccuracyEarlyStopping()
 
 learning_rate_scheduler = StepsLearningRateScheduler()
@@ -135,11 +137,10 @@ history = model.fit_generator(
 
 print('Train time, s:', int(time.time() - train_start))
 
-predictions = model.predict_classes(X_test)
-predictions = predictions.reshape((predictions.shape[0], 1))
+predictions = make_predictions(model, X_test)
 print(predictions)
-output_file_name = data_filename(
-    'play_nn.csv'.format()
-)
+output_file_name = data_filename('play_nn.csv')
 print("Writing output file {}...".format(output_file_name))
 enumerate_and_write_predictions(predictions, output_file_name)
+
+save_model(model, 'mlp2', 6)
