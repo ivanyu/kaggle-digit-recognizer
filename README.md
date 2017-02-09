@@ -3,6 +3,30 @@
 ## Results
 
 ```
+Voting of 7 Multilayer perceptron 2 Mk IV
+Test: 0.99400
+Not agree on: 18 test samples
+```
+
+```
+Multilayer perceptron 2 Mk IV - more data augmentation, no dropout
+301 epochs
+Last epoch: 6s - loss: 0.0310 - acc: 0.9967
+               - val_loss: 0.0535 - val_acc: 0.9929
+Train time: ~30 minutes
+Test: 0.99171
+```
+
+```
+Multilayer perceptron 2 Mk III - data augmentation, no dropout
+135 epochs
+Last epoch: 6s - loss: 0.0591 - acc: 0.9915
+               - val_loss: 0.0678 - val_acc: 0.9917
+Train time: ~13,5 minutes
+Test: 0.99000
+```
+
+```
 Voting of 7 Multilayer perceptron 2 Mk II
 Test: 0.98771
 Not agree on: 38 test samples

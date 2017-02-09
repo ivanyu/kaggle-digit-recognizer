@@ -21,9 +21,9 @@ models = []
 predictions = []
 for n in model_numbers:
     fname_model = path.join(meta.MODELS_DIR,
-                            'model_mlp2_{}.json'.format(n))
+                            'model_mlp2aug_{}.json'.format(n))
     fname_model_weights = path.join(meta.MODELS_DIR,
-                                    'model_mlp2_{}_weights.h5'.format(n))
+                                    'model_mlp2aug_{}_weights.h5'.format(n))
     model = load_nn_model(fname_model, fname_model_weights)
     models.append(model)
 
@@ -54,5 +54,5 @@ print(not_agreed_idx)
 
 final_predictions = np.array(final_predictions).reshape(X_test.shape[0], 1)
 
-output_file_name = meta.data_filename('play_nn_mlp2_vote.csv')
+output_file_name = meta.data_filename('play_nn_mlp2aug_vote.csv')
 enumerate_and_write_predictions(final_predictions, output_file_name)

@@ -9,7 +9,6 @@ import numpy as np
 from keras_base import load_data_prepared_for_keras, make_predictions
 from classify_base import enumerate_and_write_predictions
 from ensemble_base import load_nn_model
-from keras.models import model_from_json
 
 
 _, _, _, _, X_test = load_data_prepared_for_keras(nb_classes=10,

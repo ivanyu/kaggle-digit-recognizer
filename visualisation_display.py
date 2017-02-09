@@ -22,13 +22,11 @@ def display(images, row_n, col_n, vmin=0.0, vmax=1.0, labels=None):
 if __name__ == '__main__':
     X_test = np.load(data_filename(meta.TEST_PIXELS_BIN_FILENAME))
 
-    not_agreed_lst = [275, 626, 2646, 3097, 3127, 4480, 5571, 5784, 6379,
-                      6527, 7063, 10094, 10162, 11139, 11615, 11862,
-                      12864, 13905, 15624, 16204, 16452, 17281, 17836,
-                      17931, 18669, 19173, 20774, 21546, 22009, 22261, 22555,
-                      23874, 24789, 25103, 25523, 25816, 26560, 26650]
+    not_agreed_lst = [2251, 2611, 4239, 4341, 9202, 9900, 9924, 11596, 15413,
+                      18016, 18430, 19663, 21456, 22564, 25047, 25915,
+                      26170, 27406]
 
     # labels = [str(v) for _, v in not_agreed_lst]
     # numbers = [k for k, _ in not_agreed_lst]
     numbers = not_agreed_lst
-    display(X_test[numbers, :], 5, 8,)
+    display(X_test[numbers, :], 5, 4,)
