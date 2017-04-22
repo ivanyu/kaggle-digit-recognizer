@@ -98,3 +98,6 @@ ENV/
 # Data
 data/
 models/
+
+
+activate
