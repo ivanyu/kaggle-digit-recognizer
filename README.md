@@ -3,6 +3,12 @@
 ## Results
 
 ```
+Voting of 7 CNN 1 Mk II
+Test: 0.99443
+Not agree on: 13 test samples
+```
+
+```
 Voting of 7 Multilayer perceptron 2 Mk IV
 Test: 0.99400
 Not agree on: 18 test samples
