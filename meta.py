@@ -29,6 +29,8 @@ IMG_WIDTH = 28
 IMG_HEIGHT = 28
 IMG_VEC_LENGTH = IMG_WIDTH * IMG_HEIGHT
 
+N_CLASSES = 10
+
 
 def img_to_vector(img):
     return img.reshape((IMG_VEC_LENGTH,))

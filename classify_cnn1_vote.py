@@ -11,8 +11,7 @@ from classify_base import enumerate_and_write_predictions
 from ensemble_base import load_nn_model
 
 
-_, _, _, _, X_test = load_data_prepared_for_keras(nb_classes=10,
-                                                  valid_split=0.1)
+_, _, _, _, X_test = load_data_prepared_for_keras(valid_split=0.1)
 
 
 model_numbers = [0, 1, 2, 3, 4, 5, 6]

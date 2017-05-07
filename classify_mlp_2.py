@@ -2,7 +2,10 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
+import os
+from os import path
 import time
+import numpy as np
 from keras.models import Model
 from keras.layers import Input, Flatten
 from keras.layers import Dense, Activation, Dropout, BatchNormalization
@@ -12,9 +15,9 @@ from keras.regularizers import l2
 from keras.preprocessing.image import ImageDataGenerator
 import meta
 from meta import data_filename
-from keras_base import LearningPlotCallback, FakeLock
+from keras_base import LearningPlotCallback
 from keras_base import load_data_prepared_for_keras, make_predictions
-from keras_base import save_model
+from keras_base import train_model, train_5_fold_for_stacking, save_model
 from classify_base import enumerate_and_write_predictions
 
 
@@ -28,58 +31,45 @@ from classify_base import enumerate_and_write_predictions
 # Multilayer perceptron 2 Mk II - default Keras ImageDataGenerator
 
 
-regularization = 0.00001
-w_regularizer = l2(regularization)
+def create_model():
+    regularization = 0.00001
+    w_regularizer = l2(regularization)
 
-inputs = Input(shape=(meta.IMG_WIDTH, meta.IMG_HEIGHT, 1))
+    inputs = Input(shape=(meta.IMG_WIDTH, meta.IMG_HEIGHT, 1))
 
-layer = Flatten()(inputs)
+    layer = Flatten()(inputs)
 
-layer = Dense(800,
-              input_shape=(meta.IMG_WIDTH * meta.IMG_HEIGHT,),
-              init='glorot_normal',
-              activation=None, W_regularizer=w_regularizer)(layer)
-layer = BatchNormalization()(layer)
-layer = Activation('relu')(layer)
-layer = Dropout(0.4)(layer)
+    layer = Dense(800,
+                  input_shape=(meta.IMG_WIDTH * meta.IMG_HEIGHT,),
+                  init='glorot_normal',
+                  activation=None, W_regularizer=w_regularizer)(layer)
+    layer = BatchNormalization()(layer)
+    layer = Activation('relu')(layer)
+    layer = Dropout(0.4)(layer)
 
-layer = Dense(800,
-              init='glorot_normal',
-              activation=None, W_regularizer=w_regularizer)(layer)
-layer = BatchNormalization()(layer)
-layer = Activation('relu')(layer)
-layer = Dropout(0.4)(layer)
+    layer = Dense(800,
+                  init='glorot_normal',
+                  activation=None, W_regularizer=w_regularizer)(layer)
+    layer = BatchNormalization()(layer)
+    layer = Activation('relu')(layer)
+    layer = Dropout(0.4)(layer)
 
-outputs = Dense(10,
-                init='glorot_normal',
-                activation='softmax', W_regularizer=w_regularizer)(layer)
+    outputs = Dense(10,
+                    init='glorot_normal',
+                    activation='softmax', W_regularizer=w_regularizer)(layer)
 
-model = Model(input=inputs, output=outputs)
+    model = Model(input=inputs, output=outputs)
 
-optimizer = Adam()
-model.compile(loss='categorical_crossentropy',
-              optimizer=optimizer,
-              metrics=['accuracy'])
+    optimizer = Adam()
+    model.compile(loss='categorical_crossentropy',
+                  optimizer=optimizer,
+                  metrics=['accuracy'])
 
-model.summary()
+    model.summary()
+    return model
 
-nb_epoch = 500
+
 batch_size = 64
-
-nb_classes = 10
-
-X_train, y_train, X_valid, y_valid, X_test =\
-    load_data_prepared_for_keras(nb_classes, valid_split=0.1)
-
-samples_per_epoch = X_train.shape[0]
-
-
-class ValAccuracyEarlyStopping(Callback):
-    def on_epoch_end(self, epoch, logs={}):
-        if logs['val_acc'] >= 0.9875 or epoch >= 300:
-            self.stopped_epoch = epoch
-            self.model.stop_training = True
-        pass
 
 
 class StepsLearningRateScheduler(LearningRateScheduler):
@@ -112,35 +102,53 @@ class StepsLearningRateScheduler(LearningRateScheduler):
         return 0.00005
 
 
-learning_plot_callback = LearningPlotCallback(nb_epoch)
-val_acc_early_stopping = ValAccuracyEarlyStopping()
+def image_data_generator_creator():
+    return ImageDataGenerator(dim_ordering='tf')
 
-learning_rate_scheduler = StepsLearningRateScheduler()
 
-idg = ImageDataGenerator(dim_ordering='tf')
-train_iter = idg.flow(X_train, y_train, batch_size=batch_size, shuffle=True)
-train_iter.lock = FakeLock()
+def train_mk_ii():
+    nb_epoch = 500
 
-train_start = time.time()
+    X_train, y_train, X_valid, y_valid, X_test =\
+        load_data_prepared_for_keras(valid_split=0.1)
 
-history = model.fit_generator(
-    train_iter,
-    samples_per_epoch=samples_per_epoch,
-    nb_epoch=nb_epoch,
-    verbose=2,
-    callbacks=[learning_plot_callback,
-               val_acc_early_stopping,
-               learning_rate_scheduler],
+    class ValAccuracyEarlyStopping(Callback):
+        def on_epoch_end(self, epoch, logs={}):
+            if logs['val_acc'] >= 0.9875 or epoch >= 300:
+                self.stopped_epoch = epoch
+                self.model.stop_training = True
+            pass
 
-    validation_data=(X_valid, y_valid)
-)
+    learning_plot_callback = LearningPlotCallback(nb_epoch)
+    val_acc_early_stopping = ValAccuracyEarlyStopping()
 
-print('Train time, s:', int(time.time() - train_start))
+    learning_rate_scheduler = StepsLearningRateScheduler()
 
-predictions = make_predictions(model, X_test)
-print(predictions)
-output_file_name = data_filename('play_nn.csv')
-print("Writing output file {}...".format(output_file_name))
-enumerate_and_write_predictions(predictions, output_file_name)
+    train_start = time.time()
+    model = train_model(create_model(), nb_epoch, batch_size,
+                        X_train, y_train, X_valid, y_valid,
+                        image_data_generator_creator,
+                        callbacks=[
+                            learning_plot_callback,
+                            val_acc_early_stopping,
+                            learning_rate_scheduler])
+    print('Train time, s:', int(time.time() - train_start))
 
-save_model(model, 'mlp2', 6)
+    predictions = make_predictions(model, X_test)
+    print(predictions)
+    output_file_name = data_filename('play_nn.csv')
+    print("Writing output file {}...".format(output_file_name))
+    enumerate_and_write_predictions(predictions, output_file_name)
+
+    save_model(model, 'mlp2', 6)
+
+
+if __name__ == '__main__':
+    # train_mk_ii()
+    train_5_fold_for_stacking(
+        create_model, 'mlp2',
+        batch_size,
+        nb_epoch=280,
+        learning_rate_scheduler=StepsLearningRateScheduler(),
+        image_data_generator_creator=image_data_generator_creator,
+        model_dir='stacking_models')

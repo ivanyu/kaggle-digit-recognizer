@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
+import time
 import os
 from os import path
 import re
@@ -9,36 +10,41 @@ import matplotlib.pyplot as plt
 import json
 import numpy as np
 from keras.utils import np_utils
-from keras.preprocessing.image import Iterator
+from keras.preprocessing.image import Iterator, ImageDataGenerator
 from keras.callbacks import Callback
+from sklearn.model_selection import KFold
+from sklearn.metrics import accuracy_score
 import meta
 from classify_base import load_data
 
 
-def load_data_prepared_for_keras(nb_classes, valid_split):
+def load_data_prepared_for_keras(valid_split=None):
     (X, y, X_test) = load_data('minmax01')
 
-    y = np_utils.to_categorical(y, nb_classes)
+    y = np_utils.to_categorical(y, meta.N_CLASSES)
 
-    shuffled_indices = np.random.permutation(len(X))
-    split_point = int(len(shuffled_indices) * valid_split)
-    train_indices = shuffled_indices[:-split_point]
-    valid_indices = shuffled_indices[-split_point:]
-
-    X = X\
-        .reshape((X.shape[0], meta.IMG_WIDTH, meta.IMG_HEIGHT, 1))\
+    X = X \
+        .reshape((X.shape[0], meta.IMG_WIDTH, meta.IMG_HEIGHT, 1)) \
         .astype(float)
 
-    X_train = X[train_indices, :]
-    y_train = y[train_indices]
-    X_valid = X[valid_indices, :]
-    y_valid = y[valid_indices]
-
-    X_test = X_test\
+    X_test = X_test \
         .reshape((X_test.shape[0], meta.IMG_WIDTH, meta.IMG_HEIGHT, 1)) \
         .astype(float)
 
-    return X_train, y_train, X_valid, y_valid, X_test
+    if valid_split is not None:
+        shuffled_indices = np.random.permutation(len(X))
+        split_point = int(len(shuffled_indices) * valid_split)
+        train_indices = shuffled_indices[:-split_point]
+        valid_indices = shuffled_indices[-split_point:]
+
+        X_train = X[train_indices, :]
+        y_train = y[train_indices]
+        X_valid = X[valid_indices, :]
+        y_valid = y[valid_indices]
+
+        return X_train, y_train, X_valid, y_valid, X_test
+    else:
+        return X, y, X_test
 
 
 def make_predictions(model, X_test):
@@ -111,6 +117,187 @@ class LearningPlotCallback(Callback):
 
         plt.pause(0.0001)
         pass
+
+
+class PseudoLabelTrainIterator(Iterator):
+    def __init__(self, model,
+                 X_train, y_train, X_test, batch_size,
+                 image_data_generator_creator,
+                 shuffle=True, pseudolabel_fraction=0.25, seed=None):
+        self._model = model
+        self._X_train = X_train
+        self._y_train = y_train
+        self._X_test = X_test
+
+        self._n_train = self._X_train.shape[0]
+        self._pseudolabel_fraction = pseudolabel_fraction
+        self._n_test = self._X_test.shape[0] * self._pseudolabel_fraction
+
+        self._samples_since_epoch_started = 0
+
+        self._image_data_generator_creator = image_data_generator_creator
+
+        self._train_iter = self._image_data_generator_creator()\
+            .flow(X_train, y_train, batch_size=batch_size, shuffle=True)
+        self._train_iter.lock = FakeLock()
+
+        self._pslbl_iter = None
+
+        super(PseudoLabelTrainIterator, self).__init__(
+            self.get_samples_per_epoch(), batch_size, shuffle, seed)
+
+    def next(self):
+        if self._samples_since_epoch_started >= self.get_samples_per_epoch():
+            # print(self._samples_since_epoch_started)
+            self._samples_since_epoch_started = 0
+            self._pslbl_iter = None
+
+        if self._samples_since_epoch_started < self._n_train:
+            r = next(self._train_iter)
+            self._samples_since_epoch_started += r[0].shape[0]
+            return r
+        elif self._samples_since_epoch_started < self.get_samples_per_epoch():
+            if self._pslbl_iter is None:
+                # print(self._samples_since_epoch_started)
+                self._create_psblb_iterator()
+            r = next(self._pslbl_iter)
+            self._samples_since_epoch_started += r[0].shape[0]
+            return r
+        else:
+            assert False
+
+    def _create_psblb_iterator(self):
+        probabilities = self._model.predict_on_batch(self._X_test)
+        idxs = list(range(self._X_test.shape[0]))
+        idxs.sort(key=lambda idx: np.max(probabilities[idx]))
+        idxs = idxs[:int(len(idxs) * self._pseudolabel_fraction)]
+
+        X_test_pslbl = self._X_test[idxs]
+        y_test_pslbl = np_utils.to_categorical(
+            [pr.argmax(axis=-1) for pr in probabilities[idxs]], meta.N_CLASSES)
+
+        self._pslbl_iter = self._image_data_generator_creator()\
+            .flow(X_test_pslbl, y_test_pslbl,
+                  batch_size=self.batch_size,
+                  shuffle=self.shuffle)
+        self._pslbl_iter.lock = FakeLock()
+
+    def get_samples_per_epoch(self):
+        return self._n_train + self._n_test
+
+
+def train_model(model, nb_epoch, batch_size,
+                X_train, y_train, X_valid, y_valid,
+                image_data_generator_creator,
+                callbacks=None,
+                seed=None,
+                pseudolabel_data=None,
+                pseudolabel_fraction=None):
+    if callbacks is None:
+        callbacks = []
+    if X_valid is None:
+        validation_data = None
+    else:
+        validation_data = (X_valid, y_valid)
+
+    if pseudolabel_fraction is None:
+        assert pseudolabel_data is None
+
+        train_iter = image_data_generator_creator().flow(
+            X_train, y_train, batch_size=batch_size, shuffle=True)
+        train_iter.lock = FakeLock()
+        samples_per_epoch = X_train.shape[0]
+    else:
+        assert pseudolabel_data is not None
+        print("Training with pseudo-labeling, fraction={}".format(
+            pseudolabel_fraction))
+        train_iter = PseudoLabelTrainIterator(model, X_train, y_train, pseudolabel_data,
+                                              batch_size, image_data_generator_creator,
+                                              shuffle=True, pseudolabel_fraction=pseudolabel_fraction,
+                                              seed=seed)
+        samples_per_epoch = train_iter.get_samples_per_epoch()
+
+    model.fit_generator(
+        train_iter,
+        samples_per_epoch=samples_per_epoch,
+        nb_epoch=nb_epoch,
+        verbose=2,
+        callbacks=callbacks,
+        validation_data=validation_data
+    )
+
+    return model
+
+
+def train_5_fold_for_stacking(clf_creator, clf_name,
+                              batch_size,
+                              nb_epoch, learning_rate_scheduler,
+                              image_data_generator_creator,
+                              model_dir,
+                              pseudolabel_fraction=None):
+    (X_train_original, y_train_original, X_test_original) =\
+        load_data_prepared_for_keras(valid_split=None)
+    X_train_all = X_train_original
+    X_test = X_test_original
+
+    kfold = KFold(n_splits=5, shuffle=True, random_state=42)
+    folds = list(kfold.split(np.arange(0, X_train_original.shape[0])))
+
+    for (a, b) in folds:
+        assert np.all(np.sort(np.concatenate((a, b))) ==
+                      np.arange(0, X_train_original.shape[0]))
+
+    fold_pred_file_name = path.join(model_dir, '{}_folds.npy'.format(clf_name))
+    if not path.exists(fold_pred_file_name):
+        stacking_train = np.zeros((X_train_original.shape[0], meta.N_CLASSES))
+        for fold_n, (train_idxs, val_idxs) in enumerate(folds):
+            print("Fold", fold_n)
+
+            X_train = X_train_all[train_idxs]
+            y_train = y_train_original[train_idxs]
+            X_val = X_train_all[val_idxs]
+            y_val = y_train_original[val_idxs]
+
+            clf = clf_creator()
+            train_start = time.time()
+            clf = train_model(clf, nb_epoch, batch_size,
+                              X_train, y_train, X_valid=None, y_valid=None,
+                              image_data_generator_creator=image_data_generator_creator,
+                              callbacks=[learning_rate_scheduler],
+                              seed=fold_n,
+                              pseudolabel_data=X_val,
+                              pseudolabel_fraction=pseudolabel_fraction)
+            print('Train time, s:', int(time.time() - train_start))
+
+            probabilities = clf.predict_on_batch(X_val)
+            stacking_train[val_idxs, :] = probabilities
+
+            if probabilities.shape[-1] > 1:
+                predictions = probabilities.argmax(axis=-1)
+            else:
+                predictions = (probabilities > 0.5).astype('int32')
+            accuracy = accuracy_score(y_val.argmax(axis=-1), predictions)
+            print(accuracy)
+        np.save(fold_pred_file_name, stacking_train)
+
+    full_pred_file_name = path.join(model_dir, '{}_full.npy'.format(clf_name))
+    if not path.exists(full_pred_file_name):
+        print("Full")
+
+        clf = clf_creator()
+        train_start = time.time()
+        clf = train_model(clf, nb_epoch, batch_size,
+                          X_train_all, y_train_original,
+                          X_valid=None, y_valid=None,
+                          image_data_generator_creator=image_data_generator_creator,
+                          callbacks=[learning_rate_scheduler],
+                          seed=len(folds) + 1,
+                          pseudolabel_data=X_test,
+                          pseudolabel_fraction=pseudolabel_fraction)
+        print('Train time, s:', int(time.time() - train_start))
+
+        stacking_test = clf.predict_on_batch(X_test)
+        np.save(full_pred_file_name, stacking_test)
 
 
 # class _SubsetIterator(Iterator):

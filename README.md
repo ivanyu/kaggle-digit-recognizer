@@ -3,6 +3,29 @@
 ## Results
 
 ```
+Stacking as described in stacking.ipynb.
+
+Level 0 models:
+- RandomForest classifier, 200 estimators
+- AdaBoost classifier, 1000 estimators
+- Support vector classifier, RBF, C=2.8, γ=0.0073, PCA=35_whiten
+- Support vector classifier, RBF, C=1000, γ=0.049, PCA=35_whiten
+- KNN, k=3
+- KNN, k=7
+- Multilayer perceptron 1 Mk V (classify_mlp_1.py)
+- Multilayer perceptron 2 Mk II (classify_mlp_2.py)
+- Multilayer perceptron 2 Mk IV -- with data augmentation (classify_mlp_2aug.py)
+- CNN 1 Mk II (classify_cnn_1.py)
+- CNN 2 (classify_cnn_2.py)
+- CNN 2 with pseudo-labeling (classify_cnn_2.py)
+
+Level 1 model:
+Logistic regression with default Scikit-learn settings.
+
+Test: 0.99557
+```
+
+```
 Voting of 7 CNN 1 Mk II
 Test: 0.99443
 Not agree on: 13 test samples

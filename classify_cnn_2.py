@@ -19,16 +19,6 @@ from keras_base import train_model, train_5_fold_for_stacking, save_model
 from classify_base import enumerate_and_write_predictions
 
 
-# CNN 1 Mk I - no regularisation or dropout
-# 101 epochs
-# Last epoch: 8s - loss: 0.0034 - acc: 0.9987
-#                - val_loss: 0.0358 - val_acc: 0.9940
-# Train time: ~15 minutes
-# Test: 0.99429
-
-# CNN 1 Mk II - no regularisation, dropout 0.1
-
-
 def create_model():
     inputs = Input(shape=(meta.IMG_WIDTH, meta.IMG_HEIGHT, 1))
 
@@ -36,16 +26,21 @@ def create_model():
     regularization = 0.0
     w_regularizer = l2(regularization)
 
-    layer = Conv2D(nb_filter=32, nb_row=3, nb_col=3,
+    layer = Conv2D(nb_filter=32, nb_row=5, nb_col=5,
                    init='glorot_normal', border_mode='same',
                    input_shape=(meta.IMG_WIDTH, meta.IMG_HEIGHT, 1),
-                   activation='relu',
+                   activation='elu',
                    dim_ordering='tf')(inputs)
     layer = MaxPooling2D(pool_size=(2, 2), border_mode='same')(layer)
 
-    layer = Conv2D(nb_filter=64, nb_row=3, nb_col=3,
+    layer = Conv2D(nb_filter=64, nb_row=5, nb_col=5,
                    init='glorot_normal', border_mode='same',
-                   activation='relu')(layer)
+                   activation='elu')(layer)
+    layer = MaxPooling2D(pool_size=(2, 2), border_mode='same')(layer)
+
+    layer = Conv2D(nb_filter=128, nb_row=5, nb_col=5,
+                   init='glorot_normal', border_mode='same',
+                   activation='elu')(layer)
     layer = MaxPooling2D(pool_size=(2, 2), border_mode='same')(layer)
 
     layer = Flatten()(layer)
@@ -54,14 +49,14 @@ def create_model():
                   init='glorot_normal',
                   activation=None, W_regularizer=w_regularizer)(layer)
     layer = BatchNormalization()(layer)
-    layer = Activation('relu')(layer)
+    layer = Activation('elu')(layer)
     layer = Dropout(0.1)(layer)
 
     layer = Dense(800,
                   init='glorot_normal',
                   activation=None, W_regularizer=w_regularizer)(layer)
     layer = BatchNormalization()(layer)
-    layer = Activation('relu')(layer)
+    layer = Activation('elu')(layer)
     layer = Dropout(0.1)(layer)
 
     outputs = Dense(10,
@@ -118,7 +113,7 @@ def image_data_generator_creator():
         rotation_range=10.0, zoom_range=0.2, shear_range=0.4)
 
 
-def train_mk_ii():
+def train():
     nb_epoch = 150
 
     X_train, y_train, X_valid, y_valid, X_test =\
@@ -156,11 +151,21 @@ def train_mk_ii():
 
 
 if __name__ == '__main__':
-    # train_mk_ii()
+    # train()
+    # train_5_fold_for_stacking(
+    #     create_model, 'cnn2',
+    #     batch_size,
+    #     nb_epoch=150,
+    #     learning_rate_scheduler=StepsLearningRateScheduler(),
+    #     image_data_generator_creator=image_data_generator_creator,
+    #     model_dir='stacking_models')
+
+    # Pseudo-labeling
     train_5_fold_for_stacking(
-        create_model, 'cnn1',
+        create_model, 'cnn2_psblb',
         batch_size,
-        nb_epoch=150,
+        nb_epoch=170,
         learning_rate_scheduler=StepsLearningRateScheduler(),
         image_data_generator_creator=image_data_generator_creator,
-        model_dir='stacking_models')
+        model_dir='stacking_models',
+        pseudolabel_fraction=0.25)
