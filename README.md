@@ -144,6 +144,12 @@ Test: 0.98357
 ```
 
 ```
+XGBoost, 300 rounds
+MinMaxScaler [0, 1]
+Test: 0.97371
+```
+
+```
 kNN, k=3
 MinMaxScaler [0, 1]
 PCA=35_no_whitening
