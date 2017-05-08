@@ -26,6 +26,15 @@ Not agree on: 13 test samples
 ```
 
 ```
+CNN 1 Mk I - data augmentation, no regularisation or dropout
+101 epochs
+Last epoch: 8s - loss: 0.0034 - acc: 0.9987
+               - val_loss: 0.0358 - val_acc: 0.9940
+Train time: ~14 minutes
+Test: 0.99429
+```
+
+```
 Voting of 7 Multilayer perceptron 2 Mk IV
 Test: 0.99400
 Not agree on: 18 test samples
